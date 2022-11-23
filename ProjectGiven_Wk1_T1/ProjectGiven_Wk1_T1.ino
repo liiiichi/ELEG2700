@@ -37,6 +37,11 @@ SensorClass S1(A5);                       // Long-range IR sensor (for cup detec
 SensorClass S2(A4);                       // Short-range IR sensor
 SensorClass S3(A3);                       // Short-range IR sensor
 SensorClass S4(A2);                       // Short-range IR sensor
+
+SensorClass S5(A0);
+SensorClass S6(A1);
+SensorClass S7(A7);
+
 MotorClass MotorR(D3,D2);                 // Right Motor
 MotorClass MotorL(D5,D4);                 // Left Motor
 
@@ -70,11 +75,14 @@ void S_999()
 {
   if(FSM1.doTask())
   {
+    if(cup < 5 or cup >= 12)
     Servo1.setValue(LEFT_POS);  //RIGHT_POS
+    else if(cup >= 5)
+    Servo1.setValue(RIGHT_POS);
     Servo2.setValue(CLAMP_OPEN);
     LEDDisplay.setValue(999);
   }
-  if (FSM1.getTime() > 3000) FSM1.transit(S_101);      
+  if (FSM1.getTime() > 500) FSM1.transit(S_101);      
 }
 //------------------------------------
 void S_101()   
@@ -87,8 +95,8 @@ void S_101()
   if (S2.getHiLow()== WHT && S3.getHiLow()== BLK && S4.getHiLow()== BLK) FSM1.transit(S_103);    // Car is left-biased -> turn right
   if (S2.getHiLow()== BLK && S3.getHiLow()== BLK && S4.getHiLow()== WHT) FSM1.transit(S_104);    // Car is right-biased -> turn left
   if (S2.getHiLow()== BLK && S3.getHiLow()== BLK && S4.getHiLow()== BLK) {
-    FSM1.transit(S_201);    // Car reach the joint point
     joint = joint+1;
+    FSM1.transit(S_201);    // Car reach the joint point
   }
 }
 //------------------------------------
@@ -136,10 +144,15 @@ void S_201()
   {
     // Car goes straight forward for 0.1 second only
     LEDDisplay.setValue((joint*1000)+201); 
-    MotorR.setSpeed(0); 
-    MotorL.setSpeed(0);      
+    MotorR.setSpeed(NORMAL_SPEED-RIGHT_OFFSET); 
+    MotorL.setSpeed(NORMAL_SPEED-RIGHT_OFFSET);      
   }
-  if (FSM1.getTime() >500) FSM1.transit(S_202); 
+  if(cup < 9){
+      if (FSM1.getTime() >100) FSM1.transit(S_202); 
+  }
+  else if(cup >= 9){
+    if (FSM1.getTime() >100) FSM1.transit(S_203); 
+  }
 }
 //------------------------------------
 void S_202()   
@@ -151,6 +164,19 @@ void S_202()
     // Add action statement here!
     MotorR.setSpeed(NORMAL_SPEED-RIGHT_OFFSET); 
     MotorL.setSpeed(0);  
+  }
+  if (S2.getHiLow()== WHT) FSM1.transit(S_301); 
+}
+//------------------------------------
+void S_203()   
+{
+  if(FSM1.doTask())
+  {
+    // Car turns left
+    LEDDisplay.setValue((joint*1000)+203); 
+    // Add action statement here!
+    MotorR.setSpeed(NORMAL_SPEED-RIGHT_OFFSET); 
+    MotorL.setSpeed(NORMAL_SPEED-LEFT_OFFSET);  
   }
   if (S2.getHiLow()== WHT) FSM1.transit(S_301); 
 }
@@ -167,6 +193,7 @@ void S_301()
   if (S2.getHiLow()== WHT && S3.getHiLow()== BLK && S4.getHiLow()== WHT) FSM1.transit(S_302);
   if (S2.getHiLow()== WHT && S3.getHiLow()== BLK && S4.getHiLow()== BLK) FSM1.transit(S_303);
   if (S2.getHiLow()== BLK && S3.getHiLow()== BLK && S4.getHiLow()== WHT) FSM1.transit(S_304);
+  if (S2.getHiLow()== BLK && S3.getHiLow()== BLK && S4.getHiLow()== BLK) FSM1.transit(S_305);
   
   // Cup is Detected!
   if (S1.getHiLow()== BLK)  FSM1.transit(S_401);
@@ -194,6 +221,7 @@ void S_303()
     MotorR.setSpeed(0);  
     MotorL.setSpeed(TURN_SPEED);
   }
+  if (S1.getHiLow()== BLK)  FSM1.transit(S_401);
   if (!(S2.getHiLow()== WHT && S4.getHiLow()== BLK)) FSM1.transit(S_301);
 }
 //------------------------------------
@@ -205,7 +233,23 @@ void S_304()
     MotorR.setSpeed(TURN_SPEED); 
     MotorL.setSpeed(0);  
   }
+  if (S1.getHiLow()== BLK)  FSM1.transit(S_401);
   if (!(S2.getHiLow()== BLK && S4.getHiLow()== WHT)) FSM1.transit(S_301);
+}
+//------------------------------------
+void S_305()   
+{
+  // Car reach the Joint Point
+  if(FSM1.doTask())
+  {
+    // Car goes straight forward for 0.1 second only
+    joint = joint+1;
+    LEDDisplay.setValue((joint*1000)+305); 
+    MotorR.setSpeed(NORMAL_SPEED-RIGHT_OFFSET); 
+    MotorL.setSpeed(NORMAL_SPEED-RIGHT_OFFSET);      
+  }
+  if (S1.getHiLow()== BLK)  FSM1.transit(S_401);
+  if ((FSM1.getTime() > 300) && (joint < NUM_JOINT)) FSM1.transit(S_301);
 }
 //------------------------------------
 void S_401()
@@ -233,7 +277,10 @@ void S_402()
     MotorL.setSpeed(0);  
     Servo1.setValue(REAR_POS);
   }
-  if (FSM1.getTime() >100) FSM1.transit(S_501); 
+  if(cup < 9)
+  if (FSM1.getTime() > 100) FSM1.transit(S_501); 
+  else if(cup >= 9)
+  if (FSM1.getTime() > 100) FSM1.transit(S_901);
 }
 //------------------------------------
 void S_501()   
@@ -361,7 +408,7 @@ void S_801()
     MotorR.setSpeed(0);
     MotorL.setSpeed(0);   
   }
-  if (FSM1.getTime() > 1000) FSM1.transit(S_802);
+  if (FSM1.getTime() > 300) FSM1.transit(S_802);
 }
 //------------------------------------
 void S_802()
@@ -372,8 +419,64 @@ void S_802()
     LEDDisplay.setValue((joint*1000)+802); 
     Servo2.setValue(CLAMP_RELEASE);
   }
-    if (FSM1.getTime() > 500) {
+    if (FSM1.getTime() > 100) {
       FSM1.transit(S_999);
       joint = 0;
+      cup_det = 0;
     }
+}
+//------------------------------------
+void S_901()   
+{
+  if(FSM1.doTask())
+  {
+    // Follow the black track
+    LEDDisplay.setValue((joint*1000)+901);
+    MotorR.setSpeed(-(NORMAL_SPEED-RIGHT_OFFSET));
+    MotorL.setSpeed(-(NORMAL_SPEED-LEFT_OFFSET));
+  }
+  if (S5.getHiLow()== WHT && S6.getHiLow()== BLK && S7.getHiLow()== WHT) FSM1.transit(S_902);
+  if (S5.getHiLow()== WHT && S6.getHiLow()== BLK && S7.getHiLow()== BLK) FSM1.transit(S_903);
+  if (S5.getHiLow()== BLK && S6.getHiLow()== BLK && S7.getHiLow()== WHT) FSM1.transit(S_904);
+  if (S5.getHiLow()== WHT && S6.getHiLow()== WHT && S7.getHiLow()== WHT) FSM1.transit(S_801);    // Car reach the joint point again
+  // Cup is Detected!
+  if ((S1.getHiLow()== BLK) && (cup_det==0))  FSM1.transit(S_401);
+}
+//------------------------------------
+void S_902()   
+{
+  if(FSM1.doTask())
+  {
+    // Car goes straight
+    LEDDisplay.setValue(902); 
+    MotorR.setSpeed(-(NORMAL_SPEED-RIGHT_OFFSET));
+    MotorL.setSpeed(-(NORMAL_SPEED-LEFT_OFFSET));   
+  }
+  // Cup is Detected!
+  if ((S1.getHiLow()== BLK) && (cup_det==0))  FSM1.transit(S_401);
+  if (!(S5.getHiLow()== WHT && S7.getHiLow()== WHT)) FSM1.transit(S_901); 
+}
+//------------------------------------
+void S_903()   
+{
+  if(FSM1.doTask())
+  {
+    LEDDisplay.setValue(903);
+    MotorR.setSpeed(0);  
+    MotorL.setSpeed(-TURN_SPEED);
+  }
+    if ((S1.getHiLow()== BLK) && (cup_det==0))  FSM1.transit(S_401);
+  if (!(S5.getHiLow()== WHT && S7.getHiLow()== BLK)) FSM1.transit(S_901);
+}
+//------------------------------------
+void S_904()   
+{
+  if(FSM1.doTask())
+  {
+    LEDDisplay.setValue(904); 
+    MotorR.setSpeed(-TURN_SPEED); 
+    MotorL.setSpeed(0);  
+  }
+  if ((S1.getHiLow()== BLK) && (cup_det==0))  FSM1.transit(S_401);
+  if (!(S5.getHiLow()== BLK && S7.getHiLow()== WHT)) FSM1.transit(S_901);
 }
